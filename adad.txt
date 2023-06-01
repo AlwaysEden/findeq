@@ -1,0 +1,12 @@
+Message: Hello, stderr!
+1685622860
+지금까지 걸린 시간: 5
+Message: Hello, stderr!
+1685622865
+지금까지 걸린 시간: 10
+Message: Hello, stderr!
+1685622870
+지금까지 걸린 시간: 15
+Message: Hello, stderr!
+1685622875
+지금까지 걸린 시간: 20

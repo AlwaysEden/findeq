@@ -12,11 +12,21 @@ pthread_mutex_t lock;
 typedef struct FileSet{
   int size;
   char *content;
+  int exist;
   struct FileSet *next;
 }FileSet;
 
 FileSet *head = NULL;
 FileSet *current = NULL;
+FileSet *dup = NULL;
+
+typedef struct DupList{
+  int size;
+  struct DupList *listNext;
+  struct FileSet *fileNext;
+}DupList;
+
+DupList *rear = NULL;
 
 void newPath(char *dest, char *src1, char *src2) {
   strcpy(dest, src1);
@@ -26,35 +36,41 @@ void newPath(char *dest, char *src1, char *src2) {
 
 
 
-void * travelDir(void *void_name) {
-  char * dir_name = (char*)void_name;
-  DIR * dir = opendir(dir_name);
-  if (dir == NULL) {
-    printf("Cannot open dir.\n");
-    return NULL;
-  }
+void FindDupFiles(FileSet *startAddress){
+  FileSet *comStandard = NULL;
+  memset(comStandard, 0, sizeof(FileSet));
 
-  struct dirent *directory_entity;
-  while ((directory_entity = readdir(dir)) != NULL) {
-    if (strcmp(directory_entity->d_name, ".") == 0 || strcmp(directory_entity->d_name, "..") == 0) continue;
-    struct stat fileState;
-    char dir_path[256];
+  while(current != NULL)
+    comStandard = current;
+    FILE * standard = fopen(comStandard->content, "r");
+    fseek(standard, 0, SEEK_END);
+    int stdsize = ftell(standard);
+    rewind(standard);
+    char * stdBuffer = (char *)malloc(stdsize);
+    fread(stdBuffer, stdsize, stdsize, standard);
 
-    newPath(dir_path, dir_name, directory_entity->d_name);
+    while(startAddress != NULL){
+      if(comStandard->size == startAddress->size){
+        FILE * comparison = fopen(startAddress->content, "r");
+        fseek(comparison, 0, SEEK_END);
+        int comsize = ftell(comparison);
+        rewind(comparison);
+        char * comBuffer = (char *)malloc(comsize);
+        fread(comBuffer, comsize, comsize, comparison);
 
-    if (lstat(dir_path, &fileState) != 0) printf("lstat error\n");
-    
-    else {
-      //  Recursive call
-      if (S_ISDIR(fileState.st_mode)) {
-        travelDir(dir_path); 
+        int result = memcpy(stdBuffer, comBuffer, comStandard->size);
+
+        if(result == 0 && startAddress->exist == 0){
+          rear->size = startAddress->size;
+          rear->fileNext = startAddress;
+        }else if(result == 0 && startAddress->exist != 0){
+          
+        }
       }
-      else if (S_ISREG(fileState.st_mode)) printf("%s\n", dir_path);
+      startAddress = startAddress->next;
     }
-  }
-
-  closedir(dir);
-  return NULL;
+    current = current->next;
+  
 }
 
 void linkFiles(void *void_name){
@@ -81,21 +97,23 @@ void linkFiles(void *void_name){
         linkFiles(dir_path); 
       }
       else if (S_ISREG(fileState.st_mode)){
-        FileSet *node = (FileSet *)malloc(sizeof(FileSet));
+        FileSet *node = (FileSet *)malloc(sizeof(*node));
         node->size = fileState.st_size;
-
-        FILE *f = fopen(dir_path, "r");
-        if(f == NULL){
-          printf("No file found");
-          exit(1);
-        }
-        char *buffer1 = (char*)malloc((int)fileState.st_size);
-        node->content = (char*)malloc((int)fileState.st_size);
-        fread(buffer1, (int)fileState.st_size, (int)fileState.st_size, f);
-        strcpy(node->content, buffer1);
-        fclose(f);
+        node->content = dir_path;
+        // FILE *f = fopen(dir_path, "r");
+        // if(f == NULL){
+        //   printf("No file found");
+        //   exit(1);
+        // }
+        // char *buffer1 = (char*)malloc((int)fileState.st_size);
+        // node->content = (char*)malloc((int)fileState.st_size);
+        // fread(buffer1, (int)fileState.st_size, (int)fileState.st_size, f);
+        // memcpy(node->content, buffer1, strlen(buffer1)+1);
+        // fclose(f);
 
         node->next = NULL;
+        printf("%s\n", node->content);
+        printf("%d\n", node->size);
 
         if(head == NULL){
           head = node;
@@ -110,6 +128,9 @@ void linkFiles(void *void_name){
 
   closedir(dir);
 }
+
+
+
 
 int main(int argc, char *argv[]) {
   // int numOfThread = 1, numOfSize = 1024;
@@ -152,15 +173,17 @@ int main(int argc, char *argv[]) {
   // travelDir((void *)argv[argc-1]);
   // travelDir("/Users/jeongwon/Desktop/");
   current = head;
-  linkFiles("/Users/jeongwon/Desktop/");
+  linkFiles("/Users/jeongwon/Desktop/YAYA");
   current = head;
+  FindDupFiles(head);
+
+
   int p = 0;
-  while(1){
+  while(current != NULL){
     printf("%d\n", current->size);
     printf("%s\n", current->content);
     current = current->next;
     p++;
-    if(p == 100) break;
   }
   return 0;
 }
